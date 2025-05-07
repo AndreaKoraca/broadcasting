@@ -13,7 +13,6 @@ Route::get('/', function () {
 Route::post('/send-message', function (Request $request) {
     broadcast(new MessageSent($request->username, $request->message));
 
-    // Pošalji notifikaciju korisniku s ID 1
     $user = User::find(1);
 
     if ($user) {
