@@ -4,56 +4,52 @@
     <meta charset="UTF-8">
     <title>Laravel Broadcasting Chat</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://js.pusher.com/7.2/pusher.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/laravel-echo/1.11.3/echo.iife.js"></script>
-    
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-        }
-        #messages {
-            list-style: none;
-            padding-left: 0;
-        }
-        #messages li {
-            padding: 5px;
-            background-color: #f0f0f0;
-            margin-bottom: 5px;
-        }
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        #messages, #notifications { list-style: none; padding-left: 0; }
+        li { padding: 5px; background-color: #f0f0f0; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-<h1>Laravel Broadcasting Chat</h1>
+<h1>Broadcasting Chat</h1>
 
 <input type="text" id="username" placeholder="Your name"><br><br>
 <input type="text" id="message" placeholder="Type message">
 <button id="sendBtn">Send</button>
 
+<h2>Poruke:</h2>
 <ul id="messages"></ul>
 
+<h2>Notifikacije:</h2>
+<ul id="notifications">
+    @foreach(\App\Models\User::find(1)?->notifications ?? [] as $notification)
+        <li>{{ $notification->data['username'] }}: {{ $notification->data['message'] }}</li>
+    @endforeach
+</ul>
+
 <script>
-    console.log('JS se učitao');
+    window.Pusher = Pusher;
+    window.Pusher.logToConsole = true;
 
     window.Echo = new Echo({
         broadcaster: 'pusher',
-        key: '{{ env('PUSHER_APP_KEY') }}',
-        cluster: '{{ env('PUSHER_APP_CLUSTER') }}',
+        key: "{{ env('PUSHER_APP_KEY') }}",
+        cluster: "{{ env('PUSHER_APP_CLUSTER') }}",
         forceTLS: true
     });
 
-    console.log('Echo pokrenut.');
-
     window.Echo.channel('chat')
         .listen('MessageSent', (e) => {
-            console.log('Poruka primljena:', e);
             const messageElement = document.createElement('li');
             messageElement.innerText = `${e.username}: ${e.message}`;
             document.getElementById('messages').appendChild(messageElement);
-        });;
+        });
 
-    function sendMessage() {
+    document.getElementById('sendBtn').addEventListener('click', function () {
         const username = document.getElementById('username').value.trim();
         const message = document.getElementById('message').value.trim();
 
@@ -72,11 +68,29 @@
         });
 
         document.getElementById('message').value = '';
+    });
+
+    function loadNotifications() {
+    fetch('/notifications')
+        .then(res => res.json())
+        .then(data => {
+            const list = document.getElementById('notifications');
+            list.innerHTML = '';
+            data.forEach(notification => {
+                const li = document.createElement('li');
+                li.textContent = `${notification.data.username}: ${notification.data.message}`;
+                list.appendChild(li);
+            });
+        });
     }
 
-    document.getElementById('sendBtn').addEventListener('click', sendMessage);
+
+    loadNotifications();
+
+
+    setInterval(loadNotifications, 5000);
+
 </script>
 
 </body>
 </html>
-
